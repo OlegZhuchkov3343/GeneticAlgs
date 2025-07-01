@@ -9,18 +9,19 @@ def random_permutations(n, count):
 class StripPackingGenAlg:
     def __init__(self, data, parameters):
         self.width = data["width"]
-        self.rects = ["rectangles"]
-        self.pop_size = parameters["population_size"]
-        self.generations = parameters["generations"]
+        self.rects = data["rectangles"]
+        self.pop_size = int(parameters["population_size"])
+        self.generations = int(parameters["generations"])
         self.best_solution = list()
         self.population = list()
         self.pop_suitability = list()
         self.cross_prob = parameters["crossover_prob"]
         self.mut_prob = parameters["mutation_prob"]
-        self.sample_size = parameters["sample_size"]
+        self.sample_size = int(parameters["sample_size"])
         self.avg_suitability = list()
         self.min_suitability = list()
         self.cur_generation = -1
+        print(data, parameters)
 
     def place_rectangles(self, order):
         placed = []
@@ -46,7 +47,9 @@ class StripPackingGenAlg:
                 if y > 1000000:
                     return None, None
         max_len = max(y + h for x, y, w, h in placed)
-        return max_len, placed
+        ordered = zip(order, placed)
+        ordered = [rect[1] for rect in sorted(ordered)]
+        return max_len, ordered
 
     #Функция приспособленности - длина размещения прямоугольников, задача - минимизировать значение функции
     def suitability(self, order):
@@ -59,10 +62,15 @@ class StripPackingGenAlg:
         min_ind = self.pop_suitability.index(minimum)
         avg = sum(self.pop_suitability)/self.pop_size
         self.min_suitability.append(minimum)
-        self.best_solution.append(self.population[min_ind])
+        self.avg_suitability.append(avg)
+        self.best_solution.append((self.population[min_ind], self.pop_suitability[min_ind]))
 
     def crossover(self, gene1, gene2):
-        if random.random() > self.cross_prob:
+        #print(gene1, gene2, end=" ")
+        rand = random.random()
+        #print(round(rand, 3), end=" ")
+        if rand > self.cross_prob:
+            #print("cross cancel | ", end="")
             return gene1, gene2
         n = len(gene1)
         p1, p2 = random.randint(0, n - 1), random.randint(0, n - 1)
@@ -91,14 +99,18 @@ class StripPackingGenAlg:
         return gene_new1, gene_new2
 
     def mutation(self, gene):
-        if random.random() > self.mut_prob:
+        rand = random.random()
+        #print(round(rand, 3), end=" ")
+        if rand > self.mut_prob:
+            #print("mutation cancel | ", end="")
             return gene
         n = len(gene)
         p1, p2 = random.randint(0, n - 1), random.randint(0, n - 1)
         while p1 == p2:
             p2 = random.randint(0, n - 1)
         gene_new = gene.copy()
-        gene_new[p1], gene_new[p2] = gene_new[p2], gene_new[p1]
+        gene_new[p1], gene_new[p2] = gene[p2], gene[p1]
+        #print(gene, gene_new, "|", end=" ")
         return gene_new
 
      #Стохастическая выборка по ранжированным вероятностям
@@ -106,46 +118,59 @@ class StripPackingGenAlg:
         parents = list()
         #Сортировка популяции по убыванию ф-ии приспособленности - элементы левее имеют меньший ранг
         sorted_pop = sorted(zip(self.population, self.pop_suitability), key=lambda x: x[1], reverse=True)
-        cumulative = [(n+1)*n//2 for n in range(self.pop_size+1)] # кумулятивные суммы рангов
+        cumulative = [(n+1)*n//2 for n in range(1, self.pop_size+2)] # кумулятивные суммы рангов
         s = cumulative[self.pop_size]
-        step = s / self.pop_size # шаг выборки
-        position = random.randint(0,s)/self.pop_size # начальная позиция от 0 до s/N
+        step = s / self.sample_size # шаг выборки
+        position = random.randint(0,s)/self.sample_size # начальная позиция от 0 до s/N
         ind = 0
-        while position <= s:
+        #print(sorted_pop)
+        #print(cumulative)
+        #print(s,step,position)
+        if position < cumulative[0]:
+            parents.append(sorted_pop[ind][0])
+            position += step
+        while position <= s and ind < self.pop_size:
+            #print(position, ind, end=", ")
             if cumulative[ind] <= position < cumulative[ind+1]:
                 parents.append(sorted_pop[ind][0])
                 position += step
             else:
                 ind += 1
+        #print()
         return parents
 
     def new_population(self):
         parents = self.sample()
+        #print(len(parents), parents)
         descendants = list()
         random.shuffle(parents)
         pair_ind = 0
         while len(descendants) < self.pop_size:
-            if pair_ind >= self.sample_size-1:
+            if pair_ind >= self.sample_size-2:
                 pair_ind = 0
                 random.shuffle(parents)
             descendants.extend(self.crossover(parents[pair_ind], parents[pair_ind+1]))
-            pair_ind += 1
+            pair_ind += 2
+        #print()
         for i in range(self.pop_size):
             descendants[i] = self.mutation(descendants[i])
+        #print()
         self.population = descendants[:self.pop_size]
         self.update_suitability()
 
     def get_best_solution(self):
-        return self.best_solution[-1], self.place_rectangles(self.best_solution[-1])
+        return min(self.best_solution, key=lambda x: x[1])
 
     def next_step(self):
         if self.cur_generation == -1:
             self.population = random_permutations(len(self.rects), self.pop_size)
+            self.update_suitability()
         elif self.cur_generation == self.generations-1:
             return False
         else:
             self.new_population()
         self.cur_generation += 1
+        #print(str(self.population) + "\n" + str(self.cur_generation) + '-'*100)
         return True
 
     def execute(self):
@@ -160,3 +185,19 @@ class StripPackingGenAlg:
             return "finished"
         else:
             return "in progress"
+
+    def get_info(self):
+        info = {
+            "rect_count": len(self.rects),
+            "width": self.width,
+            "pop_size": self.pop_size,
+            "sample_size": self.sample_size,
+            "generations": self.generations,
+            "best_solution": self.place_rectangles(self.best_solution[-1][0]),
+            "cross_prob": self.cross_prob,
+            "mut_prob": self.mut_prob,
+            "avg_suitability": self.avg_suitability,
+            "min_suitability": self.min_suitability,
+            "cur_generation": self.cur_generation+1
+        }
+        return info

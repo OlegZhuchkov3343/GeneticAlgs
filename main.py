@@ -5,10 +5,10 @@ global StripePacking
 
 
 def get_analytical_info():
-    info = {
-        "best_solution": StripePacking.get_best_solution(),
-        #остальная информация для вывода на экран
-    }
+    if get_status() == "idle":
+        info = None
+    else:
+        info = StripePacking.get_info()
     return info
 
 
@@ -24,10 +24,26 @@ def restart_algorithm():
 
 
 def next_step():
+    status = get_status()
+    if status == "idle":
+        print("starting")
+        start_algorithm()
+    elif status == "finished":
+        print("restarting")
+        restart_algorithm()
+    print("step")
     StripePacking.next_step()
 
 
 def execute():
+    status = get_status()
+    if status == "idle":
+        print("starting")
+        start_algorithm()
+    elif status == "finished":
+        print("restarting")
+        restart_algorithm()
+    print("step")
     StripePacking.execute()
 
 
@@ -39,6 +55,7 @@ def get_status():
 
 
 def reset():
+    print("reset")
     global StripePacking
     StripePacking = None
 

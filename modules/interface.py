@@ -27,17 +27,22 @@ class TkWindow(tk.Tk):
         ttk.Label(entry_frame, text="Размер популяции\n(нат. число)").grid(padx=5, pady=5, column=0, row=0, sticky=tk.W)
         param1 = ttk.Entry(entry_frame, width=15)
         param1.grid(padx=5, pady=5, column=1, row=0, sticky=tk.W)
+        param1.insert("0", "100")
         ttk.Label(entry_frame, text="Количество поколений\n(нат. число)").grid(padx=5, pady=5, column=0, row=1, sticky=tk.W)
         param2 = ttk.Entry(entry_frame, width=15)
         param2.grid(padx=5, pady=5, column=1, row=1, sticky=tk.W)
+        param2.insert("0", "100")
         ttk.Label(entry_frame, text="Вероятность скрещивания\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
         param3 = ttk.Entry(entry_frame, width=15)
+        param3.insert("0", "0.9")
         param3.grid(padx=5, pady=5, column=1, row=3, sticky=tk.W)
         ttk.Label(entry_frame, text="Вероятность мутации\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=4, sticky=tk.W)
         param4 = ttk.Entry(entry_frame, width=15)
+        param4.insert("0", "0.1")
         param4.grid(padx=5, pady=5, column=1, row=4, sticky=tk.W)
         ttk.Label(entry_frame, text="Количество отбираемых родителей\n(2 <= int <= pop_size)").grid(padx=5, pady=5, column=0, row=2, sticky=tk.W)
         param5 = ttk.Entry(entry_frame, width=15)
+        param5.insert("0", "20")
         param5.grid(padx=5, pady=5, column=1, row=2, sticky=tk.W)
         entry_frame.grid(column=0, row=0, sticky=tk.W)
         self.param_fields = {"population_size": param1,
@@ -66,7 +71,7 @@ class TkWindow(tk.Tk):
         ax1.xaxis.get_major_locator().set_params(integer=True)
         ax1.yaxis.get_major_locator().set_params(integer=True)
         figure1.supylabel("Приспособленность")
-        figure1.supxlabel("№ шага")
+        figure1.supxlabel("№ поколения")
         self.canvas_suitability = FigureCanvasTkAgg(figure1, master=plot_frame)
         self.canvas_suitability.get_tk_widget().grid(row=0,column=0)
 
@@ -81,13 +86,11 @@ class TkWindow(tk.Tk):
         self.canvas_solution = FigureCanvasTkAgg(figure2, master=plot_frame)
         self.canvas_solution.get_tk_widget().grid(row=1,column=0)
 
-        info_frame = ttk.Frame(self)
-        info_frame.grid(row=0, column=2)
-        self.info_text = ttk.Label(info_frame, wraplength=250,
+        self.info_text = ttk.Label(self, wraplength=250,
                                    text="Здесь будет выводиться информация о выполнении алгоритма:\nВведенные параметры, сведения о популяции и текущем лучшем решении")
-        self.info_text.grid(row=0, column=0)
+        self.info_text.grid(row=0, column=2, padx=5, pady=5, sticky=tk.NSEW)
 
-        self.status_label = ttk.Label(self)
+        self.status_label = ttk.Label(self, wraplength=700)
         self.status_label.grid(row=1, column=0, columnspan=3)
         self.update_status()
 
@@ -147,30 +150,49 @@ class TkWindow(tk.Tk):
                 self.data["width"] = processed[0][1]
                 self.data["rectangles"] = tuple(processed[1:])
 
-    def draw_solution(self):
+    def update_params(self):
+        for param in self.param_fields:
+            self.params[param] = float(self.param_fields[param].get())
+
+    def draw_solution(self, solution, length, width):
         ax = self.canvas_solution.figure.gca()
         ax.cla()
         ax.set_title("Графическое представление решения")
         ax.xaxis.get_major_locator().set_params(integer=True)
         ax.yaxis.get_major_locator().set_params(integer=True)
-        length, placed = self.functions["get_displayed_solution"]()
-        ax.set_ylim(0, self.data["width"])
+        ax.set_ylim(0, width)
         ax.set_xlim(0, length)
-        for rectangle in placed:
+        for rectangle in solution:
             rect = Rectangle((rectangle[1], rectangle[0]), rectangle[3], rectangle[2], linewidth=1, edgecolor='black',
                              facecolor='lightblue')
             ax.add_patch(rect)
         self.canvas_solution.draw()
+
+    def update_pop_graph(self, avg, minimum):
+        n = len(avg)
+        canvas = self.canvas_suitability
+        ax = canvas.figure.gca()
+        ax.cla()
+        ax.xaxis.get_major_locator().set_params(integer=True)
+        ax.yaxis.get_major_locator().set_params(integer=True)
+        ax.plot(range(1, n+1), avg, label="Средняя", color="black", linestyle="--")
+        ax.plot(range(1, n+1), minimum, label="Минимальная", color="black", linestyle="-")
+        canvas.draw()
 
     def reset_button(self):
         self.functions["reset"]()
         self.update_window()
 
     def execute_button(self):
-        pass
+        self.update_params()
+        self.functions["execute"]()
+        self.update_window()
 
     def next_step_button(self):
-        pass
+        self.update_params()
+        self.functions["next_step"]()
+        print("updating")
+        self.update_window()
 
     def update_status(self):
         status = self.functions["get_status"]()
@@ -180,8 +202,25 @@ class TkWindow(tk.Tk):
             self.status_label.config(text="Алгоритм запущен")
         elif status == "finished":
             self.status_label.config(text="Алгоритм завершил работу, нажмите \'Следующий шаг\' или \'Выполнить до конца\', чтобы запустить алгоритм с новыми параметрами и старыми данными, или \'Сброс\', чтобы удалить старые данные")
-        return status
+        return
 
     def update_window(self):
-        status = self.update_status()
-        pass
+        self.update_status()
+        info = self.functions["get_analytical_info"]()
+        if info:
+            solution = info["best_solution"][1]
+            solution_len = info["best_solution"][0]
+            text = (f"Ширина полосы: {info["width"]}\nКоличество прямоугольников: {info["rect_count"]}\n"
+                    f"Текущее поколение: {info["cur_generation"]}\nВсего поколений: {info["generations"]}\n"
+                    f"Размер популяции: {info["pop_size"]}\nКоличество отбираемых родителей: {info["sample_size"]}\n"
+                    f"Вероятность скрещивания: {info["cross_prob"]}\nВероятность мутации: {info["mut_prob"]}\n"
+                    f"Средняя приспособленность: {info["avg_suitability"][-1]}\nМинимальная приспособленность: {info["min_suitability"][-1]}\n"
+                    f"Отображено лучшее решение из текущего поколения, длина: {solution_len}")
+            self.draw_solution(solution, solution_len, info["width"])
+            self.update_pop_graph(info["avg_suitability"], info["min_suitability"])
+        else:
+            text = "Здесь будет выводиться информация о выполнении алгоритма:\nВведенные параметры, сведения о популяции и текущем лучшем решении"
+            self.canvas_solution.figure.gca().cla()
+            self.canvas_suitability.figure.gca().cla()
+        self.info_text.config(text=text)
+
