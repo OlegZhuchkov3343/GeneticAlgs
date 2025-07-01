@@ -1,14 +1,46 @@
-from modules import interface, model
+from modules.interface import TkWindow
+from modules.model import StripPackingGenAlg
+
+global StripePacking
 
 
-def generate_random_solution():
-    global random_solution
-    random_solution = model.place_rectangles(model.random_permutations(len(data["rectangles"]), 1)[0], data["rectangles"], data["width"])
+def get_analytical_info():
+    info = {
+        "best_solution": StripePacking.get_best_solution(),
+        #остальная информация для вывода на экран
+    }
+    return info
 
 
-def get_displayed_solution():
-    if StripePacking == None:
-        return random_solution
+def start_algorithm():
+    global StripePacking
+    StripePacking = StripPackingGenAlg(data, params)
+
+
+def restart_algorithm():
+    global StripePacking
+    prev_data = StripePacking.get_data()
+    StripePacking = StripPackingGenAlg(data, params)
+
+
+def next_step():
+    StripePacking.next_step()
+
+
+def execute():
+    StripePacking.execute()
+
+
+def get_status():
+    if StripePacking:
+        return StripePacking.status()
+    else:
+        return "idle"
+
+
+def reset():
+    global StripePacking
+    StripePacking = None
 
 
 if __name__ == "__main__":
@@ -20,14 +52,17 @@ if __name__ == "__main__":
     params = {
         "population_size": 0,
         "generations": 0,
-        "crossover_prob": 0,
-        "mutation_prob": 0,
+        "crossover_prob": 0.0,
+        "mutation_prob": 0.0,
+        "sample_size": 0
     }
     functions = {
-        "generate_random_solution": generate_random_solution,
-        "get_displayed_solution": get_displayed_solution
+        "get_analytical_info": get_analytical_info,
+        "next_step": next_step,
+        "execute": execute,
+        "reset": reset,
+        "get_status": get_status
     }
     StripePacking = None
-    random_solution = None
-    window = interface.TkWindow(data, params, functions)
+    window = TkWindow(data, params, functions)
     window.mainloop()

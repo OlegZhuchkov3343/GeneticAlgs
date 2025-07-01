@@ -15,41 +15,44 @@ class TkWindow(tk.Tk):
 
     def __init__(self, data, params, functions):
         super().__init__()
-        self.geometry("1000x650")
+        self.geometry("1100x650")
         self.resizable(False, False)
         self.response = None
-        # Ссылки на единые поля данных для обеих структур
         self.data = data
         self.params = params
         # Функции для взаимодействия GUI с программой
         self.functions = functions
         frame = ttk.Frame(self)
         entry_frame = ttk.Frame(frame)
-        ttk.Label(entry_frame, text="Размер популяции").grid(padx=5, pady=5, column=0, row=0, sticky=tk.W)
+        ttk.Label(entry_frame, text="Размер популяции\n(нат. число)").grid(padx=5, pady=5, column=0, row=0, sticky=tk.W)
         param1 = ttk.Entry(entry_frame, width=15)
         param1.grid(padx=5, pady=5, column=1, row=0, sticky=tk.W)
-        ttk.Label(entry_frame, text="Количество шагов (поколений)").grid(padx=5, pady=5, column=0, row=1, sticky=tk.W)
+        ttk.Label(entry_frame, text="Количество поколений\n(нат. число)").grid(padx=5, pady=5, column=0, row=1, sticky=tk.W)
         param2 = ttk.Entry(entry_frame, width=15)
         param2.grid(padx=5, pady=5, column=1, row=1, sticky=tk.W)
-        ttk.Label(entry_frame, text="Вероятность скрещивания").grid(padx=5, pady=5, column=0, row=2, sticky=tk.W)
+        ttk.Label(entry_frame, text="Вероятность скрещивания\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
         param3 = ttk.Entry(entry_frame, width=15)
-        param3.grid(padx=5, pady=5, column=1, row=2, sticky=tk.W)
-        ttk.Label(entry_frame, text="Вероятность мутации").grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
+        param3.grid(padx=5, pady=5, column=1, row=3, sticky=tk.W)
+        ttk.Label(entry_frame, text="Вероятность мутации\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=4, sticky=tk.W)
         param4 = ttk.Entry(entry_frame, width=15)
-        param4.grid(padx=5, pady=5, column=1, row=3, sticky=tk.W)
+        param4.grid(padx=5, pady=5, column=1, row=4, sticky=tk.W)
+        ttk.Label(entry_frame, text="Количество отбираемых родителей\n(2 <= int <= pop_size)").grid(padx=5, pady=5, column=0, row=2, sticky=tk.W)
+        param5 = ttk.Entry(entry_frame, width=15)
+        param5.grid(padx=5, pady=5, column=1, row=2, sticky=tk.W)
         entry_frame.grid(column=0, row=0, sticky=tk.W)
         self.param_fields = {"population_size": param1,
                              "generations": param2,
                              "crossover_prob": param3,
-                             "mutation_prob": param4}
+                             "mutation_prob": param4,
+                             "sample_size": param5
+                             }
 
         ttk.Button(frame, text="Случайный набор прямоугольников", command=self.random_input).grid(padx=5, pady=5, column=0, row=1, sticky=tk.W)
         ttk.Button(frame, text="Ручной ввод данных", command=self.manual_input).grid(padx=5, pady=5, column=0, row=2, sticky=tk.W)
         ttk.Button(frame, text="Ввод данных из файла", command=self.file_input).grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
-        ttk.Button(frame, text="Сброс выполняемого алгоритма", command=self.reset).grid(padx=5, pady=30, column=0, row=4, sticky=tk.W)
-        ttk.Button(frame, text="Следующий шаг", command=self.next_step).grid(padx=5, pady=5, column=0, row=5, sticky=tk.W)
-        ttk.Button(frame, text="Выполнить до конца", command=self.execute).grid(padx=5, pady=5, column=0, row=6, sticky=tk.W)
-        ttk.Button(frame, text="Сгенерировать случайное решение", command=self.random_solution).grid(padx=5, pady=5, column=0, row=7, sticky=tk.W)
+        ttk.Button(frame, text="Сброс", command=self.reset_button).grid(padx=5, pady=30, column=0, row=4, sticky=tk.W)
+        ttk.Button(frame, text="Следующий шаг", command=self.next_step_button).grid(padx=5, pady=5, column=0, row=5, sticky=tk.W)
+        ttk.Button(frame, text="Выполнить до конца", command=self.execute_button).grid(padx=5, pady=5, column=0, row=6, sticky=tk.W)
 
         frame.grid(column=0, row=0)
 
@@ -80,9 +83,14 @@ class TkWindow(tk.Tk):
 
         info_frame = ttk.Frame(self)
         info_frame.grid(row=0, column=2)
-        self.info_text = ttk.Label(info_frame, wraplength=200,
+        self.info_text = ttk.Label(info_frame, wraplength=250,
                                    text="Здесь будет выводиться информация о выполнении алгоритма:\nВведенные параметры, сведения о популяции и текущем лучшем решении")
         self.info_text.grid(row=0, column=0)
+
+        self.status_label = ttk.Label(self)
+        self.status_label.grid(row=1, column=0, columnspan=3)
+        self.update_status()
+
         self.protocol("WM_DELETE_WINDOW", self.finish)
 
     def input_popup(self, prompt="", prefill=""):
@@ -118,11 +126,13 @@ class TkWindow(tk.Tk):
         self.data["rectangles"] = tuple(processed[1:])
 
     def random_input(self):
-        #TODO: ввод параметров для случайной генерации входных данных
-        min_side = 1
-        max_side = 20
-        self.data["n"] = 20
-        self.data["width"] = 40
+        self.input_popup("Введите через пробел: ширину полосы N, количество прямоугольников M, минимальную и максимальную длины стороны прямоугольника",
+                         "40 20 1 20")
+        processed = [int(i) for i in self.response.split()]
+        min_side = processed[2]
+        max_side = processed[3]
+        self.data["n"] = processed[1]
+        self.data["width"] = processed[0]
         self.data["rectangles"] = tuple([(randint(min_side, max_side), randint(min_side, max_side)) for i in range(self.data["n"])])
 
     def file_input(self):
@@ -152,15 +162,26 @@ class TkWindow(tk.Tk):
             ax.add_patch(rect)
         self.canvas_solution.draw()
 
-    def reset(self):
+    def reset_button(self):
+        self.functions["reset"]()
+        self.update_window()
+
+    def execute_button(self):
         pass
 
-    def execute(self):
+    def next_step_button(self):
         pass
 
-    def next_step(self):
-        pass
+    def update_status(self):
+        status = self.functions["get_status"]()
+        if status == "idle":
+            self.status_label.config(text="Алгоритм не запущен, введите данные и параметры и нажмите \'Следующий шаг\' или \'Выполнить до конца\'")
+        elif status == "in progress":
+            self.status_label.config(text="Алгоритм запущен")
+        elif status == "finished":
+            self.status_label.config(text="Алгоритм завершил работу, нажмите \'Следующий шаг\' или \'Выполнить до конца\', чтобы запустить алгоритм с новыми параметрами и старыми данными, или \'Сброс\', чтобы удалить старые данные")
+        return status
 
-    def random_solution(self):
-        self.functions["generate_random_solution"]()
-        self.draw_solution()
+    def update_window(self):
+        status = self.update_status()
+        pass
