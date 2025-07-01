@@ -15,13 +15,14 @@ class TkWindow(tk.Tk):
 
     def __init__(self, data, params, functions):
         super().__init__()
-        self.geometry("1100x650")
+        self.geometry("1100x850")
         self.resizable(False, False)
         self.response = None
         self.data = data
         self.params = params
         # Функции для взаимодействия GUI с программой
         self.functions = functions
+        self.finished = False
         frame = ttk.Frame(self)
         entry_frame = ttk.Frame(frame)
         ttk.Label(entry_frame, text="Размер популяции\n(нат. число)").grid(padx=5, pady=5, column=0, row=0, sticky=tk.W)
@@ -32,24 +33,29 @@ class TkWindow(tk.Tk):
         param2 = ttk.Entry(entry_frame, width=15)
         param2.grid(padx=5, pady=5, column=1, row=1, sticky=tk.W)
         param2.insert("0", "100")
-        ttk.Label(entry_frame, text="Вероятность скрещивания\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
+        ttk.Label(entry_frame, text="Нижний порог разницы\nсреднего и минимума\n(float > 0)").grid(padx=5, pady=5, column=0, row=2, sticky=tk.W)
+        param6 = ttk.Entry(entry_frame, width=15)
+        param6.grid(padx=5, pady=5, column=1, row=2, sticky=tk.W)
+        param6.insert("0", "1.0")
+        ttk.Label(entry_frame, text="Вероятность скрещивания\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=4, sticky=tk.W)
         param3 = ttk.Entry(entry_frame, width=15)
         param3.insert("0", "0.9")
-        param3.grid(padx=5, pady=5, column=1, row=3, sticky=tk.W)
-        ttk.Label(entry_frame, text="Вероятность мутации\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=4, sticky=tk.W)
+        param3.grid(padx=5, pady=5, column=1, row=4, sticky=tk.W)
+        ttk.Label(entry_frame, text="Вероятность мутации\n(0.0 <= float <= 1.0)").grid(padx=5, pady=5, column=0, row=5, sticky=tk.W)
         param4 = ttk.Entry(entry_frame, width=15)
         param4.insert("0", "0.1")
-        param4.grid(padx=5, pady=5, column=1, row=4, sticky=tk.W)
-        ttk.Label(entry_frame, text="Количество отбираемых родителей\n(2 <= int <= pop_size)").grid(padx=5, pady=5, column=0, row=2, sticky=tk.W)
+        param4.grid(padx=5, pady=5, column=1, row=5, sticky=tk.W)
+        ttk.Label(entry_frame, text="Количество отбираемых родителей\n(2 <= int <= pop_size)").grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
         param5 = ttk.Entry(entry_frame, width=15)
         param5.insert("0", "20")
-        param5.grid(padx=5, pady=5, column=1, row=2, sticky=tk.W)
+        param5.grid(padx=5, pady=5, column=1, row=3, sticky=tk.W)
         entry_frame.grid(column=0, row=0, sticky=tk.W)
         self.param_fields = {"population_size": param1,
                              "generations": param2,
                              "crossover_prob": param3,
                              "mutation_prob": param4,
-                             "sample_size": param5
+                             "sample_size": param5,
+                             "diff": param6
                              }
 
         ttk.Button(frame, text="Случайный набор прямоугольников", command=self.random_input).grid(padx=5, pady=5, column=0, row=1, sticky=tk.W)
@@ -57,14 +63,18 @@ class TkWindow(tk.Tk):
         ttk.Button(frame, text="Ввод данных из файла", command=self.file_input).grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
         ttk.Button(frame, text="Сброс", command=self.reset_button).grid(padx=5, pady=30, column=0, row=4, sticky=tk.W)
         ttk.Button(frame, text="Следующий шаг", command=self.next_step_button).grid(padx=5, pady=5, column=0, row=5, sticky=tk.W)
-        ttk.Button(frame, text="Выполнить до конца", command=self.execute_button).grid(padx=5, pady=5, column=0, row=6, sticky=tk.W)
+        ttk.Button(frame, text="Выполнить до\nмакс. количества поколений", command=self.execute_button).grid(padx=5, pady=5, column=0, row=6, sticky=tk.W)
+        ttk.Button(frame, text="Выполнить до условия остановки\n(разница ниже порога)", command=self.executediff_button).grid(padx=5, pady=5, column=0, row=7, sticky=tk.W)
+        ttk.Button(frame, text="Приостановить работу", command=self.pause_button).grid(padx=5, pady=5, column=0,
+                                                                                             row=8, sticky=tk.W)
+        ttk.Button(frame, text="Перезапуск с параметрами", command=self.restart_button).grid(padx=5, pady=30, column=0, row=9, sticky=tk.W)
 
         frame.grid(column=0, row=0)
 
         plot_frame = ttk.Frame(self)
         plot_frame.grid(padx=5, pady=5, column=1, row=0)
 
-        figure1 = Figure(figsize=(5,3))
+        figure1 = Figure(figsize=(5,4))
         plot1 = figure1.add_subplot(1, 1, 1)
         plot1.set_title("Лучшая и средняя приспособленность на шаге")
         ax1 = figure1.gca()
@@ -75,7 +85,7 @@ class TkWindow(tk.Tk):
         self.canvas_suitability = FigureCanvasTkAgg(figure1, master=plot_frame)
         self.canvas_suitability.get_tk_widget().grid(row=0,column=0)
 
-        figure2 = Figure(figsize=(5,3))
+        figure2 = Figure(figsize=(5,4))
         plot2 = figure2.add_subplot(1, 1, 1)
         plot2.set_title("Графическое представление решения")
         ax2 = figure2.gca()
@@ -177,31 +187,60 @@ class TkWindow(tk.Tk):
         ax.yaxis.get_major_locator().set_params(integer=True)
         ax.plot(range(1, n+1), avg, label="Средняя", color="black", linestyle="--")
         ax.plot(range(1, n+1), minimum, label="Минимальная", color="black", linestyle="-")
+        ax.legend()
         canvas.draw()
 
     def reset_button(self):
+        self.functions["unpause"]()
         self.functions["reset"]()
         self.update_window()
 
     def execute_button(self):
+        self.finished = False
+        self.functions["unpause"]()
         self.update_params()
-        self.functions["execute"]()
+        while self.functions["get_status"]() not in ["pause", "generation limit", "generation+diff limit"]:
+            self.functions["next_step"]()
+            self.update_window()
+        self.finished = True
+        self.update_window()
+
+    def executediff_button(self):
+        self.finished = False
+        self.functions["unpause"]()
+        self.update_params()
+        while self.functions["get_status"]() not in ["diff limit", "pause", "generation+diff limit"]:
+            self.functions["next_step"]()
+            self.update_window()
+        self.finished = True
         self.update_window()
 
     def next_step_button(self):
+        self.functions["unpause"]()
         self.update_params()
         self.functions["next_step"]()
-        print("updating")
         self.update_window()
+
+    def restart_button(self):
+        self.functions["unpause"]()
+        self.update_params()
+        self.functions["restart"]()
+        self.functions["next_step"]()
+        self.update_window()
+
+    def pause_button(self):
+        self.functions["pause"]()
 
     def update_status(self):
         status = self.functions["get_status"]()
         if status == "idle":
             self.status_label.config(text="Алгоритм не запущен, введите данные и параметры и нажмите \'Следующий шаг\' или \'Выполнить до конца\'")
-        elif status == "in progress":
+        elif status == "pause":
+            self.status_label.config(text="Алгоритм приостановлен")
+        elif not self.finished:
             self.status_label.config(text="Алгоритм запущен")
-        elif status == "finished":
-            self.status_label.config(text="Алгоритм завершил работу, нажмите \'Следующий шаг\' или \'Выполнить до конца\', чтобы запустить алгоритм с новыми параметрами и старыми данными, или \'Сброс\', чтобы удалить старые данные")
+        else:
+            self.status_label.config(text="Алгоритм завершил работу, нажмите \'Перезапуск с параметрами\', чтобы запустить алгоритм с новыми параметрами и старыми данными, или \'Сброс\', чтобы удалить старые данные")
         return
 
     def update_window(self):
@@ -215,7 +254,7 @@ class TkWindow(tk.Tk):
                     f"Размер популяции: {info["pop_size"]}\nКоличество отбираемых родителей: {info["sample_size"]}\n"
                     f"Вероятность скрещивания: {info["cross_prob"]}\nВероятность мутации: {info["mut_prob"]}\n"
                     f"Средняя приспособленность: {info["avg_suitability"][-1]}\nМинимальная приспособленность: {info["min_suitability"][-1]}\n"
-                    f"Отображено лучшее решение из текущего поколения, длина: {solution_len}")
+                    f"Отображено лучшее найденное решение, длина: {solution_len}")
             self.draw_solution(solution, solution_len, info["width"])
             self.update_pop_graph(info["avg_suitability"], info["min_suitability"])
         else:
@@ -223,4 +262,5 @@ class TkWindow(tk.Tk):
             self.canvas_solution.figure.gca().cla()
             self.canvas_suitability.figure.gca().cla()
         self.info_text.config(text=text)
+        self.update()
 

@@ -21,6 +21,7 @@ class StripPackingGenAlg:
         self.avg_suitability = list()
         self.min_suitability = list()
         self.cur_generation = -1
+        self.diff = parameters["diff"]
         print(data, parameters)
 
     def place_rectangles(self, order):
@@ -66,11 +67,8 @@ class StripPackingGenAlg:
         self.best_solution.append((self.population[min_ind], self.pop_suitability[min_ind]))
 
     def crossover(self, gene1, gene2):
-        #print(gene1, gene2, end=" ")
         rand = random.random()
-        #print(round(rand, 3), end=" ")
         if rand > self.cross_prob:
-            #print("cross cancel | ", end="")
             return gene1, gene2
         n = len(gene1)
         p1, p2 = random.randint(0, n - 1), random.randint(0, n - 1)
@@ -100,9 +98,7 @@ class StripPackingGenAlg:
 
     def mutation(self, gene):
         rand = random.random()
-        #print(round(rand, 3), end=" ")
         if rand > self.mut_prob:
-            #print("mutation cancel | ", end="")
             return gene
         n = len(gene)
         p1, p2 = random.randint(0, n - 1), random.randint(0, n - 1)
@@ -110,7 +106,6 @@ class StripPackingGenAlg:
             p2 = random.randint(0, n - 1)
         gene_new = gene.copy()
         gene_new[p1], gene_new[p2] = gene[p2], gene[p1]
-        #print(gene, gene_new, "|", end=" ")
         return gene_new
 
      #Стохастическая выборка по ранжированным вероятностям
@@ -123,25 +118,19 @@ class StripPackingGenAlg:
         step = s / self.sample_size # шаг выборки
         position = random.randint(0,s)/self.sample_size # начальная позиция от 0 до s/N
         ind = 0
-        #print(sorted_pop)
-        #print(cumulative)
-        #print(s,step,position)
         if position < cumulative[0]:
             parents.append(sorted_pop[ind][0])
             position += step
         while position <= s and ind < self.pop_size:
-            #print(position, ind, end=", ")
             if cumulative[ind] <= position < cumulative[ind+1]:
                 parents.append(sorted_pop[ind][0])
                 position += step
             else:
                 ind += 1
-        #print()
         return parents
 
     def new_population(self):
         parents = self.sample()
-        #print(len(parents), parents)
         descendants = list()
         random.shuffle(parents)
         pair_ind = 0
@@ -151,10 +140,8 @@ class StripPackingGenAlg:
                 random.shuffle(parents)
             descendants.extend(self.crossover(parents[pair_ind], parents[pair_ind+1]))
             pair_ind += 2
-        #print()
         for i in range(self.pop_size):
             descendants[i] = self.mutation(descendants[i])
-        #print()
         self.population = descendants[:self.pop_size]
         self.update_suitability()
 
@@ -165,24 +152,23 @@ class StripPackingGenAlg:
         if self.cur_generation == -1:
             self.population = random_permutations(len(self.rects), self.pop_size)
             self.update_suitability()
-        elif self.cur_generation == self.generations-1:
-            return False
         else:
             self.new_population()
         self.cur_generation += 1
-        #print(str(self.population) + "\n" + str(self.cur_generation) + '-'*100)
         return True
-
-    def execute(self):
-        for _ in range(self.cur_generation, self.generations-1):
-            self.next_step()
 
     def get_data(self):
         return {"n": len(self.rects), "width": self.width, "rectangles": self.rects}
 
     def status(self):
-        if self.cur_generation == self.generations-1:
-            return "finished"
+        if self.cur_generation == -1:
+            return "init"
+        elif self.cur_generation == self.generations-1 and self.avg_suitability[-1] - self.min_suitability[-1] < self.diff:
+            return "generation+diff limit"
+        elif self.cur_generation == self.generations-1:
+            return "generation limit"
+        elif self.avg_suitability[-1] - self.min_suitability[-1] < self.diff:
+            return "diff limit"
         else:
             return "in progress"
 
@@ -193,7 +179,7 @@ class StripPackingGenAlg:
             "pop_size": self.pop_size,
             "sample_size": self.sample_size,
             "generations": self.generations,
-            "best_solution": self.place_rectangles(self.best_solution[-1][0]),
+            "best_solution": self.place_rectangles(self.get_best_solution()[0]),
             "cross_prob": self.cross_prob,
             "mut_prob": self.mut_prob,
             "avg_suitability": self.avg_suitability,

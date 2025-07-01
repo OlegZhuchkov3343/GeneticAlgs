@@ -2,6 +2,7 @@ from modules.interface import TkWindow
 from modules.model import StripPackingGenAlg
 
 global StripePacking
+global paused
 
 
 def get_analytical_info():
@@ -20,34 +21,19 @@ def start_algorithm():
 def restart_algorithm():
     global StripePacking
     prev_data = StripePacking.get_data()
-    StripePacking = StripPackingGenAlg(data, params)
+    StripePacking = StripPackingGenAlg(prev_data, params)
 
 
 def next_step():
     status = get_status()
     if status == "idle":
-        print("starting")
         start_algorithm()
-    elif status == "finished":
-        print("restarting")
-        restart_algorithm()
-    print("step")
     StripePacking.next_step()
 
 
-def execute():
-    status = get_status()
-    if status == "idle":
-        print("starting")
-        start_algorithm()
-    elif status == "finished":
-        print("restarting")
-        restart_algorithm()
-    print("step")
-    StripePacking.execute()
-
-
 def get_status():
+    if paused:
+        return "pause"
     if StripePacking:
         return StripePacking.status()
     else:
@@ -60,7 +46,18 @@ def reset():
     StripePacking = None
 
 
+def pause():
+    global paused
+    paused = True
+
+
+def unpause():
+    global paused
+    paused = False
+
+
 if __name__ == "__main__":
+    paused = False
     data = {
         "n": 0,
         "width": 0,
@@ -76,9 +73,11 @@ if __name__ == "__main__":
     functions = {
         "get_analytical_info": get_analytical_info,
         "next_step": next_step,
-        "execute": execute,
         "reset": reset,
-        "get_status": get_status
+        "get_status": get_status,
+        "restart": restart_algorithm,
+        "pause": pause,
+        "unpause": unpause
     }
     StripePacking = None
     window = TkWindow(data, params, functions)
