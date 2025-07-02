@@ -258,6 +258,7 @@ class TkWindow(tk.Tk):
             solution_len = info["best_solution"][0]
             text = (f"Ширина полосы: {info["width"]}\nКоличество прямоугольников: {info["rect_count"]}\n"
                     f"Текущее поколение: {info["cur_generation"]}\nВсего поколений: {info["generations"]}\n"
+                    f"Граница схождения: {info["diff"]}\nТекущая разница: {info["avg_suitability"][-1]-info["min_suitability"][-1]}\n"
                     f"Размер популяции: {info["pop_size"]}\nКоличество отбираемых родителей: {info["sample_size"]}\n"
                     f"Вероятность скрещивания: {info["cross_prob"]}\nВероятность мутации: {info["mut_prob"]}\n"
                     f"Средняя приспособленность: {round(info["avg_suitability"][-1], 3)}\nМинимальная приспособленность: {info["min_suitability"][-1]}\n"
