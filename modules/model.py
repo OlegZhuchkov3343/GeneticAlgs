@@ -192,6 +192,7 @@ class StripPackingGenAlg:
             "mut_prob": self.mut_prob,
             "avg_suitability": self.avg_suitability,
             "min_suitability": self.min_suitability,
-            "cur_generation": self.cur_generation+1
+            "cur_generation": self.cur_generation+1,
+            "diff": self.diff
         }
         return info
