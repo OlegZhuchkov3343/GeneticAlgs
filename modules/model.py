@@ -179,7 +179,7 @@ class StripPackingGenAlg:
             "pop_size": self.pop_size,
             "sample_size": self.sample_size,
             "generations": self.generations,
-            "best_solution": self.place_rectangles(self.get_best_solution()[0]),
+            "best_solution": self.place_rectangles(self.best_solution[-1][0]),
             "cross_prob": self.cross_prob,
             "mut_prob": self.mut_prob,
             "avg_suitability": self.avg_suitability,

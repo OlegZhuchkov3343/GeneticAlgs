@@ -253,8 +253,8 @@ class TkWindow(tk.Tk):
                     f"Текущее поколение: {info["cur_generation"]}\nВсего поколений: {info["generations"]}\n"
                     f"Размер популяции: {info["pop_size"]}\nКоличество отбираемых родителей: {info["sample_size"]}\n"
                     f"Вероятность скрещивания: {info["cross_prob"]}\nВероятность мутации: {info["mut_prob"]}\n"
-                    f"Средняя приспособленность: {info["avg_suitability"][-1]}\nМинимальная приспособленность: {info["min_suitability"][-1]}\n"
-                    f"Отображено лучшее найденное решение, длина: {solution_len}")
+                    f"Средняя приспособленность: {round(info["avg_suitability"][-1], 3)}\nМинимальная приспособленность: {info["min_suitability"][-1]}\n"
+                    f"Отображено лучшее решение в поколении, длина: {solution_len}")
             self.draw_solution(solution, solution_len, info["width"])
             self.update_pop_graph(info["avg_suitability"], info["min_suitability"])
         else:
