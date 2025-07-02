@@ -63,11 +63,12 @@ class TkWindow(tk.Tk):
         ttk.Button(frame, text="Ввод данных из файла", command=self.file_input).grid(padx=5, pady=5, column=0, row=3, sticky=tk.W)
         ttk.Button(frame, text="Сброс", command=self.reset_button).grid(padx=5, pady=30, column=0, row=4, sticky=tk.W)
         ttk.Button(frame, text="Следующий шаг", command=self.next_step_button).grid(padx=5, pady=5, column=0, row=5, sticky=tk.W)
-        ttk.Button(frame, text="Выполнить до\nмакс. количества поколений", command=self.execute_button).grid(padx=5, pady=5, column=0, row=6, sticky=tk.W)
-        ttk.Button(frame, text="Выполнить до условия остановки\n(разница ниже порога)", command=self.executediff_button).grid(padx=5, pady=5, column=0, row=7, sticky=tk.W)
+        ttk.Button(frame, text="Шаг назад", command=self.step_back_button).grid(padx=5, pady=5, column=0, row=6, sticky=tk.W)
+        ttk.Button(frame, text="Выполнить до\nмакс. количества поколений", command=self.execute_button).grid(padx=5, pady=5, column=0, row=7, sticky=tk.W)
+        ttk.Button(frame, text="Выполнить до условия остановки\n(разница ниже порога)", command=self.executediff_button).grid(padx=5, pady=5, column=0, row=8, sticky=tk.W)
         ttk.Button(frame, text="Приостановить работу", command=self.pause_button).grid(padx=5, pady=5, column=0,
-                                                                                             row=8, sticky=tk.W)
-        ttk.Button(frame, text="Перезапуск с параметрами", command=self.restart_button).grid(padx=5, pady=30, column=0, row=9, sticky=tk.W)
+                                                                                             row=9, sticky=tk.W)
+        ttk.Button(frame, text="Перезапуск с параметрами", command=self.restart_button).grid(padx=5, pady=30, column=0, row=10, sticky=tk.W)
 
         frame.grid(column=0, row=0)
 
@@ -188,6 +189,7 @@ class TkWindow(tk.Tk):
         ax.plot(range(1, n+1), avg, label="Средняя", color="black", linestyle="--")
         ax.plot(range(1, n+1), minimum, label="Минимальная", color="black", linestyle="-")
         ax.legend()
+        ax.set_title("Лучшая и средняя приспособленность на шаге")
         canvas.draw()
 
     def reset_button(self):
@@ -231,6 +233,11 @@ class TkWindow(tk.Tk):
     def pause_button(self):
         self.functions["pause"]()
 
+    def step_back_button(self):
+        if self.functions["get_status"]() not in ["idle", "init"]:
+            self.functions["step_back"]()
+        self.update_window()
+
     def update_status(self):
         status = self.functions["get_status"]()
         if status == "idle":
@@ -254,7 +261,8 @@ class TkWindow(tk.Tk):
                     f"Размер популяции: {info["pop_size"]}\nКоличество отбираемых родителей: {info["sample_size"]}\n"
                     f"Вероятность скрещивания: {info["cross_prob"]}\nВероятность мутации: {info["mut_prob"]}\n"
                     f"Средняя приспособленность: {round(info["avg_suitability"][-1], 3)}\nМинимальная приспособленность: {info["min_suitability"][-1]}\n"
-                    f"Отображено лучшее решение в поколении, длина: {solution_len}")
+                    f"Отображено лучшее решение в поколении, длина: {solution_len}\n"
+                    f"Минимум за всю работу алгоритма: {min(info["min_suitability"])}")
             self.draw_solution(solution, solution_len, info["width"])
             self.update_pop_graph(info["avg_suitability"], info["min_suitability"])
         else:

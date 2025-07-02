@@ -22,7 +22,7 @@ class StripPackingGenAlg:
         self.min_suitability = list()
         self.cur_generation = -1
         self.diff = parameters["diff"]
-        print(data, parameters)
+        self.gen_history = list()
 
     def place_rectangles(self, order):
         placed = []
@@ -155,7 +155,15 @@ class StripPackingGenAlg:
         else:
             self.new_population()
         self.cur_generation += 1
-        return True
+        self.gen_history.append(self.population)
+
+    def step_back(self):
+        self.population = self.gen_history[-2]
+        self.cur_generation -= 1
+        self.gen_history.pop(-1)
+        self.avg_suitability.pop(-1)
+        self.min_suitability.pop(-1)
+        self.best_solution.pop(-1)
 
     def get_data(self):
         return {"n": len(self.rects), "width": self.width, "rectangles": self.rects}

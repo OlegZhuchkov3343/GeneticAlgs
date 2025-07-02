@@ -56,6 +56,11 @@ def unpause():
     paused = False
 
 
+def step_back():
+    if StripePacking:
+        StripePacking.step_back()
+
+
 if __name__ == "__main__":
     paused = False
     data = {
@@ -77,7 +82,8 @@ if __name__ == "__main__":
         "get_status": get_status,
         "restart": restart_algorithm,
         "pause": pause,
-        "unpause": unpause
+        "unpause": unpause,
+        "step_back": step_back
     }
     StripePacking = None
     window = TkWindow(data, params, functions)
